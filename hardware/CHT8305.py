@@ -1,22 +1,9 @@
-#
-# MIT License
-#
-# Copyright (c) 2023 Henrik Roslund
-#
-
-"""!
-@brief  I2C cascade module library class
-"""
 import machine
 from utime import sleep_ms
 
-class I2C_CHT8305_SEN0546:
-    #
-    # CHT8305/SEN0546
-    # Decimal address:  64  | Hexa address:  0x40
-    #
+class I2C_CHT8305:
     CHT8305_Address = 0x40
-    I2C_Delay_time = 50     #increased from 20 to 50ms
+    I2C_Delay_time = 100 
 
     # Registers
     REG_TEMPERATURE = 0x00
@@ -41,8 +28,7 @@ class I2C_CHT8305_SEN0546:
     wLength = 0
 
     def __init__(self, ID, SCL, SDA):
-        self.i2c = machine.I2C(id=ID, scl=machine.Pin(SCL), sda=machine.Pin(SDA), freq=100000)
-
+        self.i2c = machine.I2C(id=ID, scl=machine.Pin(SCL), sda=machine.Pin(SDA), freq=400000)
 
     def get_CHT8305_CONFIG(self):
         ReadBuf_CHT8305_Config_Reg = bytes(self.wLength)
@@ -126,22 +112,17 @@ class I2C_CHT8305_SEN0546:
         )
 
     def get_CHT8305_TEMPERATURE_HUMIDITY(self):
+        Temperature = None
+        Humidity = None
         try:
-            ReadBuf_CHT8305_Temp_Reg = bytes(self.wLength)
-            ReadBuf_CHT8305_Hum_Reg = bytes(self.wLength)
-            com_CHT8305_T_Reg = bytearray(4)
-            com_CHT8305_H_Reg = bytearray(4)
-            com_CHT8305_T_Reg[0] = self.REG_TEMPERATURE
-            com_CHT8305_H_Reg[0] = self.REG_HUMIDITY
-            self.i2c.writeto_mem(self.CHT8305_Address, self.REG_TEMPERATURE, com_CHT8305_T_Reg)
+            self.i2c.writeto(self.CHT8305_Address, bytes([self.REG_TEMPERATURE]))
             sleep_ms(self.I2C_Delay_time)
-            ReadBuf_CHT8305_Temp_Reg = self.i2c.readfrom(self.CHT8305_Address, 4)
-            Temperature_raw = ReadBuf_CHT8305_Temp_Reg[0] << 8 | ReadBuf_CHT8305_Temp_Reg[1]
-            Temperature = (Temperature_raw * 165 / 65535) - 40
-            # print("Temperature: ", Temperature)
-            Humidity_prep = ReadBuf_CHT8305_Temp_Reg[2] << 8 | ReadBuf_CHT8305_Temp_Reg[3]
-            Humidity = (Humidity_prep / 65535) * 100
-            # print("Humidity: ", Humidity)
+            data = self.i2c.readfrom(self.CHT8305_Address, 4)
+            temp_raw = (data[0] << 8) | data[1]
+            Temperature = (temp_raw * 165 / 65535) - 40
+            hum_raw = (data[2] << 8) | data[3]
+            Humidity = (hum_raw / 65535) * 100
+            # print(f"Temperature: {Temperature:.2f} °C, Humidity: {Humidity:.2f} %")
         except Exception as e:
             print("Error in get_CHT8305_TEMPERATURE_HUMIDITY function", " : {}".format(e))
             pass
@@ -149,24 +130,20 @@ class I2C_CHT8305_SEN0546:
 
     def req_CHT8305_TEMPERATURE_HUMIDITY(self):
         try:
-            com_CHT8305_T_Reg = bytearray(4)
-            com_CHT8305_H_Reg = bytearray(4)
-            com_CHT8305_T_Reg[0] = self.REG_TEMPERATURE
-            com_CHT8305_H_Reg[0] = self.REG_HUMIDITY
-            self.i2c.writeto_mem(self.CHT8305_Address, self.REG_TEMPERATURE, com_CHT8305_T_Reg)
+            self.i2c.writeto(self.CHT8305_Address, bytes([self.REG_TEMPERATURE]))
+            sleep_ms(self.I2C_Delay_time)
         except Exception as e:
             print("Error in req_CHT8305_TEMPERATURE_HUMIDITY function", " : {}".format(e))
             pass
 
     def read_CHT8305_TEMPERATURE_HUMIDITY(self):
         try:
-            ReadBuf_CHT8305_Temp_Reg = bytes(self.wLength)
-            ReadBuf_CHT8305_Hum_Reg = bytes(self.wLength)
-            ReadBuf_CHT8305_Temp_Reg = self.i2c.readfrom(self.CHT8305_Address, 4)
-            Temperature_raw = ReadBuf_CHT8305_Temp_Reg[0] << 8 | ReadBuf_CHT8305_Temp_Reg[1]
-            Temperature = (Temperature_raw * 165 / 65535) - 40
-            Humidity_prep = ReadBuf_CHT8305_Temp_Reg[2] << 8 | ReadBuf_CHT8305_Temp_Reg[3]
-            Humidity = (Humidity_prep / 65535) * 100
+            data = self.i2c.readfrom(self.CHT8305_Address, 4)
+            temp_raw = (data[0] << 8) | data[1]
+            Temperature = (temp_raw * 165 / 65535) - 40
+            hum_raw = (data[2] << 8) | data[3]
+            Humidity = (hum_raw / 65535) * 100
+            # print(f"Temperature: {Temperature:.2f} °C, Humidity: {Humidity:.2f} %")
         except Exception as e:
             print("Error in read_CHT8305_TEMPERATURE_HUMIDITY function", " : {}".format(e))
             pass 
