@@ -3,7 +3,7 @@ from utime import sleep_ms
 
 class I2C_CHT8305:
     CHT8305_Address = 0x40
-    I2C_Delay_time = 100 
+    I2C_Delay_time = 200 
 
     # Registers
     REG_TEMPERATURE = 0x00
