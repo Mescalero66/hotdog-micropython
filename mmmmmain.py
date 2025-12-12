@@ -15,6 +15,7 @@ ONEWIRE_PIN = 3
 LOAD_RELAY_PIN = 5
 ### PARAMETERS ###
 UTC_OFFSET = 60 * 60 * 10
+MAX_LOG_FILES = 14
 SLEEP_MINUTES = 15
 OUTSIDE_TEMP_LOW = 12
 OUTSIDE_TEMP_HIGH = 16
@@ -22,7 +23,7 @@ INSIDE_TEMP_LOW = 12
 INSIDE_TEMP_HIGH = 21
 ### VARIABLES ###
 _loop_state = 0
-_current_log_filename = str(None)
+_current_log_filename = None
 _sleep_duration = 0
 _actual_inside_temp = 0
 _actual_outside_temp = 0
@@ -45,6 +46,15 @@ def blink_led():
     time.sleep_ms(100)
     led.on()
 
+def connect_wifi():
+    wlan.active(True)
+    if not wlan.isconnected():
+        #wlan.connect(WIFI_SSID, WIFI_PW)
+        pass
+
+def disconnect_wifi():
+    wlan.active(False)
+
 def create_daily_log_file():
     global _current_log_filename
     lt = time.localtime()
@@ -53,6 +63,7 @@ def create_daily_log_file():
     if "logs" not in os.listdir():
         os.mkdir("logs")
     if _current_log_filename != filename:
+        cleanup_old_logs()
         _current_log_filename = filename
         try:
             with open(_current_log_filename, "r"):
@@ -61,6 +72,16 @@ def create_daily_log_file():
             with open(_current_log_filename, "a") as text_file:
                 text_file.write("Timestamp,InsideTemp,OutsideTemp,OutsideHumi,HeaterOn,SleepDuration,CPUTemp\n")
     return _current_log_filename, timestamp
+
+def cleanup_old_logs():
+    if "logs" not in os.listdir():
+        return
+    files = [f for f in os.listdir("logs") if f.startswith("hotdog_") and f.endswith(".csv")]
+    files.sort()
+    while len(files) > MAX_LOG_FILES:
+        oldest = files.pop(0)
+        os.remove(f"logs/{oldest}")
+        print(f"Deleted old log: {oldest}")
 
 def log():
     filename, timestamp = create_daily_log_file()
@@ -86,9 +107,11 @@ def go_to_sleep():
     global _sleep_duration
     sleeptime = time.time()
     log()
+    disconnect_wifi()
     machine.lightsleep(int(SLEEP_MINUTES * 1000 * 60))
     awaketime = time.time()
     _sleep_duration = int(awaketime - sleeptime)
+    connect_wifi()
     log()
     sleeptime = 0
     awaketime = 0
@@ -141,12 +164,11 @@ def on_loop():
 # ## WIFI ##
 # wlan.active(False)
 # wlan.active(True)
+# wlan.configs(reconnects=3)
 # if not wlan.isconnected():
 #     print('connecting to network...')
 #     wlan.connect(WIFI_SSID, WIFI_PW)
-#     while not wlan.isconnected():
-#         time.sleep(2)
-#         print("connection status:", wlan.status())
+#     print("connection status:", wlan.status())
 #     print('network config:', wlan.ipconfig('addr4'))
 # ## CLOCK ##
 # if time.localtime()[0] < 2024:
@@ -155,9 +177,9 @@ def on_loop():
 #     real_time_clock.datetime(local_time)
 # print(time.localtime())
 
-### MAIN LOOP ###
 state = off_loop()
 current_loop = 0
+### MAIN LOOP ###
 while True:
     try:
         interval = next(state)
