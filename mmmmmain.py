@@ -185,7 +185,6 @@ if time.localtime()[0] < 2024:
     local_time = time.localtime(time.time() + UTC_OFFSET)
     real_time_clock.datetime(local_time)
 
-
 state = off_loop()
 current_loop = 0
 ### MAIN LOOP ###
@@ -193,11 +192,9 @@ while True:
     try:
         interval = next(state)
         # time.sleep(interval)
-        #
         for i in range(int(interval)):
             blink_led()
             time.sleep(1)
-        #
         if _loop_state != current_loop:
             current_loop = _loop_state
             if current_loop == 0:
