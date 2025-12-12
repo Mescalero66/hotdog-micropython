@@ -17,7 +17,7 @@ LOAD_RELAY_PIN = 5
 ### PARAMETERS ###
 UTC_OFFSET = 60 * 60 * 10
 MAX_LOG_FILES = 14
-SLEEP_MINUTES = 1
+SLEEP_MINUTES = 15
 AVERAGE_READS = 4
 OFF_READ_INTERVAL = 15
 ON_READ_INTERVAL = 30
@@ -25,7 +25,7 @@ ON_READ_INTERVAL = 30
 OUTSIDE_TEMP_LOW = 12
 OUTSIDE_TEMP_HIGH = 16
 INSIDE_TEMP_LOW = 12
-INSIDE_TEMP_HIGH = 21
+INSIDE_TEMP_HIGH = 18
 ### VARIABLES ###
 _loop_state = 0
 _current_log_filename = None
@@ -112,14 +112,14 @@ def open_relay():
 def go_to_sleep():
     global _sleep_duration
     sleeptime = time.time()
-    disconnect_wifi()
+    # disconnect_wifi()
     led.off()
     machine.lightsleep(int(SLEEP_MINUTES * 1000 * 60))
     awaketime = time.time()
     _sleep_duration = int(awaketime - sleeptime)
     log()
     _sleep_duration = 0
-    connect_wifi()    
+    # connect_wifi()    
 
 def off_loop():
     global _loop_state, _sleep_duration, _actual_inside_temp, _actual_outside_temp, _actual_outside_humi
@@ -171,19 +171,19 @@ def on_loop():
 
 ### HOUSEKEEPING ###
 ## WIFI ##
-wlan.active(False)
-wlan.active(True)
-wlan.config(reconnects=3)
-if not wlan.isconnected():
-    print('connecting to network...')
-    wlan.connect(WIFI_SSID, WIFI_PW)
-    print("connection status:", wlan.status())
-    print('network config:', wlan.ipconfig('addr4'))
-## CLOCK ##
-if time.localtime()[0] < 2024:
-    ntptime.settime()
-    local_time = time.localtime(time.time() + UTC_OFFSET)
-    real_time_clock.datetime(local_time)
+# wlan.active(False)
+# wlan.active(True)
+# wlan.config(reconnects=3)
+# if not wlan.isconnected():
+#     print('connecting to network...')
+#     wlan.connect(WIFI_SSID, WIFI_PW)
+#     print("connection status:", wlan.status())
+#     print('network config:', wlan.ipconfig('addr4'))
+# ## CLOCK ##
+# if time.localtime()[0] < 2024:
+#     ntptime.settime()
+#     local_time = time.localtime(time.time() + UTC_OFFSET)
+#     real_time_clock.datetime(local_time)
 
 state = off_loop()
 current_loop = 0
@@ -194,7 +194,7 @@ while True:
         # time.sleep(interval)
         for i in range(int(interval)):
             blink_led()
-            time.sleep(1)
+            time.sleep_ms(900)
         if _loop_state != current_loop:
             current_loop = _loop_state
             if current_loop == 0:
