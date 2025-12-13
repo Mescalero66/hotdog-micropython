@@ -1,5 +1,5 @@
 import machine, time, ntptime, os
-import esp32, network, onewire
+import esp32, network, onewire, socket
 import ds18x20 as OW_SENSOR
 from machine import Pin, I2C, RTC
 from hardware.CHT8305 import I2C_CHT8305 as I2C_SENSOR
@@ -20,7 +20,7 @@ MAX_LOG_FILES = 14
 SLEEP_MINUTES = 15
 AVERAGE_READS = 4
 OFF_READ_INTERVAL = 15
-ON_READ_INTERVAL = 30
+ON_READ_INTERVAL = 15
 ### SETPOINTS ###
 OUTSIDE_TEMP_LOW = 12
 OUTSIDE_TEMP_HIGH = 16
@@ -37,6 +37,11 @@ _actual_heater_status = 0
 
 ### OBJECT SETUP ###
 wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.config(txpower=8)
+wlan.PM_NONE
+# wlan.ifconfig(('192.168.1.19','255.255.255.0','192.168.1.1', '192.168.1.1'))
+wlan.config(reconnects=-1)
 led = Pin(BLUE_LED, Pin.OUT)
 load_relay = Pin(LOAD_RELAY_PIN, Pin.OUT)
 load_relay.off()
@@ -51,11 +56,33 @@ def blink_led():
     time.sleep_ms(100)
     led.on()
 
-def connect_wifi():
+def connect_wifi(timeout=10):
+    wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-    if not wlan.isconnected():
-        #wlan.connect(WIFI_SSID, WIFI_PW)
-        pass
+    wlan.disconnect()
+    time.sleep(0.2)
+
+    print("Connecting to:", WIFI_SSID)
+    wlan.connect(WIFI_SSID, WIFI_PW)
+
+    t0 = time.ticks_ms()
+    while True:
+        status = wlan.status()
+        print("connection status:", status)
+
+        if status in (5, 1010):   # GOT_IP / CONNECTED
+            print("Connected:", wlan.ifconfig())
+            return True
+
+        if status == 2:  # AUTH FAILED
+            print("Authentication failed")
+            return False
+
+        if time.ticks_diff(time.ticks_ms(), t0) > timeout * 1000:
+            print("Connection timeout")
+            return False
+
+        time.sleep(0.2)
 
 def disconnect_wifi():
     wlan.active(False)
@@ -75,7 +102,7 @@ def create_daily_log_file():
                 pass
         except OSError:
             with open(_current_log_filename, "a") as text_file:
-                text_file.write("Timestamp,InsideTemp,OutsideTemp,OutsideHumi,HeaterOn,SleepDuration,CPUTemp\n")
+                text_file.write("Timestamp,InsideTemp,OutsideTemp,HeaterOn,,,OutsideHumi,SleepDuration,CPUTemp\n")
     return _current_log_filename, timestamp
 
 def cleanup_old_logs():
@@ -90,7 +117,9 @@ def cleanup_old_logs():
 
 def log():
     filename, timestamp = create_daily_log_file()
-    logline = (f"{_actual_inside_temp:.1f},{_actual_outside_temp:.1f},{_actual_outside_humi:.1f},{_actual_heater_status},{_sleep_duration},{esp32.mcu_temperature():.1f}")
+    if filename.startswith("hotdog_2000"):
+        return
+    logline = (f"{_actual_inside_temp:.1f},{_actual_outside_temp:.1f},{_actual_heater_status},,,{_actual_outside_humi:.1f},{_sleep_duration},{esp32.mcu_temperature():.1f}")
     with open(filename, "a") as text_file:
         text_file.write(f"{timestamp},{(str(logline))} \n")
     print(f"{timestamp},{(str(logline))} ")
@@ -143,7 +172,8 @@ def off_loop():
             if (outside_mean <= OUTSIDE_TEMP_LOW) or (inside_mean <= INSIDE_TEMP_LOW):
                 _loop_state = 1
             else:
-                go_to_sleep()
+                # go_to_sleep()
+                pass
         yield OFF_READ_INTERVAL
 
 def on_loop():
@@ -171,19 +201,26 @@ def on_loop():
 
 ### HOUSEKEEPING ###
 ## WIFI ##
-# wlan.active(False)
-# wlan.active(True)
-# wlan.config(reconnects=3)
-# if not wlan.isconnected():
-#     print('connecting to network...')
-#     wlan.connect(WIFI_SSID, WIFI_PW)
-#     print("connection status:", wlan.status())
-#     print('network config:', wlan.ipconfig('addr4'))
+wlan.active(False)
+wlan.active(True)
+if not wlan.isconnected():
+    print('connecting to network:', WIFI_SSID)
+    wlan.connect(WIFI_SSID, WIFI_PW)
+    while not wlan.isconnected():
+        time.sleep(2)
+        print("Status:", wlan.status())
+    print('network config:', wlan.ipconfig('addr4'))
+try:
+    print(socket.getaddrinfo("google.com", 80))
+    print("DNS OK")
+except Exception as e:
+    print("DNS failed:", e)
+
 # ## CLOCK ##
-# if time.localtime()[0] < 2024:
-#     ntptime.settime()
-#     local_time = time.localtime(time.time() + UTC_OFFSET)
-#     real_time_clock.datetime(local_time)
+if time.localtime()[0] < 2024:
+    ntptime.settime()
+    local_time = time.localtime(time.time() + UTC_OFFSET)
+    real_time_clock.datetime(local_time)
 
 state = off_loop()
 current_loop = 0
