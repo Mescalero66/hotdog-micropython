@@ -182,9 +182,9 @@ def off_loop():
         humi_ave.append(outside_humi)
         current_spike()
         if (len(outside_ave)) >= AVERAGE_READS or (len(inside_ave)) >= AVERAGE_READS:
-            outside_mean = int((sum(outside_ave)) / (len(outside_ave)))
-            inside_mean = int((sum(inside_ave)) / (len(inside_ave)))
-            humi_mean = int((sum(humi_ave)) / (len(humi_ave)))
+            outside_mean = (sum(outside_ave)) / (len(outside_ave))
+            inside_mean = (sum(inside_ave)) / (len(inside_ave))
+            humi_mean = (sum(humi_ave)) / (len(humi_ave))
             outside_ave = []
             inside_ave = []
             humi_ave = []
@@ -204,6 +204,7 @@ def on_loop():
     close_relay()
     outside_ave = []
     inside_ave = []
+    humi_ave = []
     while True:
         ow_sensor_bus.convert_temp()
         time.sleep(1)
@@ -215,9 +216,9 @@ def on_loop():
         humi_ave.append(outside_humi)
         current_spike()
         if (len(outside_ave)) >= AVERAGE_READS or (len(inside_ave)) >= AVERAGE_READS:
-            outside_mean = int((sum(outside_ave)) / (len(outside_ave)))
-            inside_mean = int((sum(inside_ave)) / (len(inside_ave)))
-            humi_mean = int((sum(humi_ave)) / (len(humi_ave)))
+            outside_mean = (sum(outside_ave)) / (len(outside_ave))
+            inside_mean = (sum(inside_ave)) / (len(inside_ave))
+            humi_mean = (sum(humi_ave)) / (len(humi_ave))
             outside_ave = []
             inside_ave = []
             humi_ave = []
@@ -249,7 +250,11 @@ except Exception as e:
     print("DNS failed:", e)
     pass
 ## CLOCK ##
-ntptime.settime()
+try:
+    ntptime.settime()
+except Exception as e:
+    print("NTP update failed:", e)
+    pass
 yy, mm, dd, hr, min, sec, wd, yd = time.localtime(time.time() + UTC_OFFSET)
 real_time_clock.datetime((yy, mm, dd, wd, hr, min, sec, 0))
 
