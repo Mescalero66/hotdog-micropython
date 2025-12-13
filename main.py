@@ -31,10 +31,10 @@ INSIDE_TEMP_HIGH = 18
 _loop_state = 0
 _current_log_filename = None
 _sleep_duration = 0
-_actual_inside_temp = 0
-_actual_outside_temp = 0
-_actual_outside_humi = 0
-_actual_heater_status = 0
+_actual_inside_temp = 0.0
+_actual_outside_temp = 0.0
+_actual_outside_humi = 0.0
+_actual_heater_status = 0.0
 
 ### OBJECT SETUP ###
 wlan = network.WLAN(network.STA_IF)
