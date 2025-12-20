@@ -5,6 +5,7 @@ from machine import Pin, I2C, RTC
 from bluetooth import BLE
 from hardware.CHT8305 import I2C_CHT8305 as I2C_SENSOR
 import hardware.WLAN_KEY as wlan_key
+import sysconfig
 
 ### WIFI ###
 WIFI_SSID = wlan_key.ssid
@@ -16,17 +17,17 @@ SCL_PIN = 7
 ONEWIRE_PIN = 3
 LOAD_RELAY_PIN = 5
 ### PARAMETERS ###
-UTC_OFFSET = 60 * 60 * 11   # DST
-MAX_LOG_FILES = 14
-SLEEP_MINUTES = 15
-AVERAGE_READS = 4
-OFF_READ_INTERVAL = 15
-ON_READ_INTERVAL = 15
+UTC_OFFSET = 60 * 60 * sysconfig.utcoffset
+MAX_LOG_FILES = sysconfig.maxlogfiles
+SLEEP_MINUTES = sysconfig.sleepminutes
+AVERAGE_READS = sysconfig.averagereads
+OFF_READ_INTERVAL = sysconfig.offreadinterval
+ON_READ_INTERVAL = sysconfig.onreadinterval
 ### SETPOINTS ###
-OUTSIDE_TEMP_LOW = 12
-OUTSIDE_TEMP_HIGH = 16
-INSIDE_TEMP_LOW = 12
-INSIDE_TEMP_HIGH = 18
+OUTSIDE_TEMP_LOW = sysconfig.outsidetemplow
+OUTSIDE_TEMP_HIGH = sysconfig.outsidetemphigh
+INSIDE_TEMP_LOW = sysconfig.outsidetemplow
+INSIDE_TEMP_HIGH = sysconfig.outsidetemphigh
 ### VARIABLES ###
 _loop_state = 0
 _current_log_filename = None
@@ -231,8 +232,8 @@ def on_loop():
         yield ON_READ_INTERVAL
 
 ## WIFI ##
-wlan.active(False)
-wlan.active(True)
+# wlan.active(False)
+# wlan.active(True)
 if not wlan.isconnected():
     wlan.config(txpower=8)
     wlan.PM_NONE
@@ -249,6 +250,7 @@ try:
 except Exception as e:
     print("DNS failed:", e)
     pass
+
 ## CLOCK ##
 try:
     ntptime.settime()
