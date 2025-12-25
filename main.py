@@ -8,8 +8,11 @@ import hardware.WLAN_KEY as wlan_key
 import sysconfig
 
 ### WIFI ###
+ENABLE_WIFI = 0
 WIFI_SSID = wlan_key.ssid
 WIFI_PW = wlan_key.password
+### LOGGING ###
+ENABLE_LOGGING = 0
 ### CONSTANTS ###
 BLUE_LED = 8
 SDA_PIN = 6
@@ -38,8 +41,9 @@ _actual_outside_humi = 0.0
 _actual_heater_status = 0.0
 
 ### OBJECT SETUP ###
-wlan = network.WLAN(network.STA_IF)
-wlan.active(True)
+if ENABLE_WIFI == 1:
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
 ble = BLE()
 led = Pin(BLUE_LED, Pin.OUT)
 load_relay = Pin(LOAD_RELAY_PIN, Pin.OUT)
@@ -132,6 +136,8 @@ def cleanup_old_logs():
         print(f"Deleted old log: {oldest}")
 
 def log():
+    if ENABLE_LOGGING == 0:
+        return
     filename, timestamp = create_daily_log_file()
     if filename.startswith("hotdog_2000"):
         return
@@ -232,36 +238,36 @@ def on_loop():
         yield ON_READ_INTERVAL
 
 ## WIFI ##
-# wlan.active(False)
-# wlan.active(True)
-if not wlan.isconnected():
-    wlan.config(txpower=8)
-    wlan.PM_NONE
-    wlan.config(reconnects=-1)
-    print('connecting to network:', WIFI_SSID)
-    wlan.connect(WIFI_SSID, WIFI_PW)
-    while not wlan.isconnected():
-        blink_led_wifi()
-        print("WLAN Status:", wlan.status())
-    print('network config:', wlan.ipconfig('addr4'))
-try:
-    print(socket.getaddrinfo("google.com", 80))
-    print("DNS OK")
-except Exception as e:
-    print("DNS failed:", e)
-    pass
+if ENABLE_WIFI == 1:
+    if not wlan.isconnected():
+        wlan.config(txpower=8)
+        wlan.PM_NONE
+        wlan.config(reconnects=-1)
+        print('connecting to network:', WIFI_SSID)
+        wlan.connect(WIFI_SSID, WIFI_PW)
+        while not wlan.isconnected():
+            blink_led_wifi()
+            print("WLAN Status:", wlan.status())
+        print('network config:', wlan.ipconfig('addr4'))
+    try:
+        print(socket.getaddrinfo("google.com", 80))
+        print("DNS OK")
+    except Exception as e:
+        print("DNS failed:", e)
+        pass
 
 ## CLOCK ##
-try:
-    ntptime.settime()
-except Exception as e:
-    print("NTP update failed:", e)
-    pass
-yy, mm, dd, hr, min, sec, wd, yd = time.localtime(time.time() + UTC_OFFSET)
-real_time_clock.datetime((yy, mm, dd, wd, hr, min, sec, 0))
+if ENABLE_WIFI == 1:
+    try:
+        ntptime.settime()
+    except Exception as e:
+        print("NTP update failed:", e)
+        pass
+    yy, mm, dd, hr, min, sec, wd, yd = time.localtime(time.time() + UTC_OFFSET)
+    real_time_clock.datetime((yy, mm, dd, wd, hr, min, sec, 0))
 
 ## HOUSEKEEPING ##
-print(f"Local: {time.localtime()} RTC: {real_time_clock.datetime()}")
+# print(f"Local: {time.localtime()} RTC: {real_time_clock.datetime()}")
 state = off_loop()
 current_loop = 0
 

@@ -10,6 +10,6 @@ onreadinterval = 15
 
 ### SETPOINTS ###
 outsidetemplow = 12
-outsidetemphigh = 16
+outsidetemphigh = 18
 insidetemplow = 12
-insidetemphigh = 18
+insidetemphigh = 16
